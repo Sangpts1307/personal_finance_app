@@ -1,0 +1,65 @@
+# === OS ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === IDE & Editors ===
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+*.swp
+*.swo
+
+# === Database ===
+database/*.local.sql
+database/backup/
+
+# === Java / Maven (Backend) ===
+**/target/
+*.class
+*.jar
+*.war
+*.ear
+finance_backend/.mvn/wrapper/maven-wrapper.jar
+
+# === Android / Gradle (Frontend) ===
+.gradle/
+**/build/
+finance_android/local.properties
+*.apk
+*.ap_
+*.aab
+finance_android/.navigation/
+finance_android/captures/
+finance_android/.externalNativeBuild/
+finance_android/.cxx/
+
+# === Credentials & Secrets ===
+**/firebase-service-account.json
+**/google-services.json
+**/*.pem
+**/*.jks
+**/*.keystore
+.env
+.env.*
+
+# === Logs & Temporary ===
+**/logs/
+**/uploads/
+*.log
+
+# === Python ===
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+ENV/
+*.egg-info/
