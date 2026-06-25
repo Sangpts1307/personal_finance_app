@@ -10,7 +10,7 @@ public class Constants {
      * - Emulator Android: dùng 10.0.2.2 (ánh xạ tới localhost máy host)
      * - Thiết bị thật: đổi thành IP LAN của máy tính (ví dụ: 192.168.1.x)
      */
-    public static final String BASE_URL = "http://10.0.2.2:8080/";
+    public static final String BASE_URL = "http://localhost:8080/";
 
     // SharedPreferences keys
     public static final String PREF_NAME = "personal_finance_prefs";
