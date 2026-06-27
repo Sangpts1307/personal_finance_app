@@ -32,12 +32,18 @@ public class UserService {
      * Nếu chưa tồn tại → tạo user mới và lưu vào DB.
      */
     @Transactional
-    public UserDTO syncFirebaseUser(String firebaseUid, String email, String fullName) {
+    public UserDTO syncFirebaseUser(String firebaseUid, String email, String fullName, String avatarUrl, String authProvider) {
         Optional<User> existingUser = userRepository.findByFirebaseUid(firebaseUid);
 
         if (existingUser.isPresent()) {
             logger.info("User đã tồn tại: UID={}", firebaseUid);
-            return UserDTO.fromEntity(existingUser.get());
+            User user = existingUser.get();
+            // Cập nhật lại avatar nếu trước đó chưa có
+            if ((user.getAvatarUrl() == null || user.getAvatarUrl().isEmpty()) && avatarUrl != null && !avatarUrl.isEmpty()) {
+                user.setAvatarUrl(avatarUrl);
+                user = userRepository.save(user);
+            }
+            return UserDTO.fromEntity(user);
         }
 
         // Tạo user mới
@@ -45,7 +51,8 @@ public class UserService {
         newUser.setFirebaseUid(firebaseUid);
         newUser.setEmail(email);
         newUser.setFullName(fullName);
-        newUser.setAuthProvider("firebase");
+        newUser.setAvatarUrl(avatarUrl);
+        newUser.setAuthProvider(authProvider != null ? authProvider : "firebase");
 
         User savedUser = userRepository.save(newUser);
         logger.info("Tạo user mới thành công: UID={}, email={}", firebaseUid, email);

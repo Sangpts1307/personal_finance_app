@@ -49,10 +49,27 @@ public class AuthController {
             String uid = decodedToken.getUid();
             String email = decodedToken.getEmail();
 
-            // Đồng bộ user vào MySQL (tạo mới nếu chưa có)
-            UserDTO userDTO = userService.syncFirebaseUser(uid, email, request.getFullName());
+            // Trích xuất thông tin bổ sung từ claims của token
+            String fullName = (String) decodedToken.getClaims().get("name");
+            if (fullName == null || fullName.isEmpty()) {
+                fullName = request.getFullName();
+            }
+            String avatarUrl = (String) decodedToken.getClaims().get("picture");
 
-            logger.info("Login thành công: email={}", email);
+            // Lấy Auth Provider từ claims
+            String authProvider = "firebase";
+            java.util.Map<String, Object> firebaseClaim = (java.util.Map<String, Object>) decodedToken.getClaims().get("firebase");
+            if (firebaseClaim != null) {
+                String signInProvider = (String) firebaseClaim.get("sign_in_provider");
+                if (signInProvider != null) {
+                    authProvider = signInProvider;
+                }
+            }
+
+            // Đồng bộ user vào MySQL (tạo mới hoặc lấy cũ)
+            UserDTO userDTO = userService.syncFirebaseUser(uid, email, fullName, avatarUrl, authProvider);
+
+            logger.info("Login thành công: email={}, provider={}", email, authProvider);
             return ResponseEntity.ok(ApiResponse.success("Đăng nhập thành công", userDTO));
 
         } catch (FirebaseAuthException e) {
@@ -74,12 +91,28 @@ public class AuthController {
             FirebaseToken decodedToken = firebaseAuth.verifyIdToken(request.getIdToken());
             String uid = decodedToken.getUid();
             String email = decodedToken.getEmail();
+            
+            // Trích xuất thông tin bổ sung từ claims của token
             String fullName = request.getFullName();
+            if (fullName == null || fullName.isEmpty()) {
+                fullName = (String) decodedToken.getClaims().get("name");
+            }
+            String avatarUrl = (String) decodedToken.getClaims().get("picture");
+
+            // Lấy Auth Provider từ claims
+            String authProvider = "firebase";
+            java.util.Map<String, Object> firebaseClaim = (java.util.Map<String, Object>) decodedToken.getClaims().get("firebase");
+            if (firebaseClaim != null) {
+                String signInProvider = (String) firebaseClaim.get("sign_in_provider");
+                if (signInProvider != null) {
+                    authProvider = signInProvider;
+                }
+            }
 
             // Đồng bộ user vào MySQL
-            UserDTO userDTO = userService.syncFirebaseUser(uid, email, fullName);
+            UserDTO userDTO = userService.syncFirebaseUser(uid, email, fullName, avatarUrl, authProvider);
 
-            logger.info("Register thành công: email={}", email);
+            logger.info("Register thành công: email={}, provider={}", email, authProvider);
             return ResponseEntity
                     .status(HttpStatus.CREATED)
                     .body(ApiResponse.success("Đăng ký thành công", userDTO));
