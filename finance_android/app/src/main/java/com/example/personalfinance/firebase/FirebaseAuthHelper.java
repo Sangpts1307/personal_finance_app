@@ -4,8 +4,10 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.auth.GoogleAuthProvider;
 
 /**
  * Helper quản lý đăng ký / đăng nhập Email+Password qua Firebase Auth SDK.
@@ -18,6 +20,26 @@ public class FirebaseAuthHelper {
 
     public FirebaseAuthHelper() {
         this.firebaseAuth = FirebaseAuth.getInstance();
+    }
+
+    /**
+     * Đăng nhập Firebase bằng tài khoản Google sử dụng Google ID Token.
+     */
+    public void loginWithGoogle(String googleIdToken, FirebaseAuthCallback callback) {
+        AuthCredential credential = GoogleAuthProvider.getCredential(googleIdToken, null);
+        firebaseAuth.signInWithCredential(credential)
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful() && firebaseAuth.getCurrentUser() != null) {
+                        Log.d(TAG, "Firebase login with Google successful");
+                        getIdToken(callback);
+                    } else {
+                        String error = task.getException() != null
+                                ? task.getException().getMessage()
+                                : "Đăng nhập Google với Firebase thất bại";
+                        Log.e(TAG, "Firebase login with Google failed: " + error);
+                        callback.onFailure(error);
+                    }
+                });
     }
 
     /**
