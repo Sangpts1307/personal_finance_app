@@ -82,6 +82,47 @@ public class AuthViewModel extends AndroidViewModel {
     }
 
     /**
+     * Đăng nhập bằng Google: Gửi Google ID Token lên Firebase -> Lấy Firebase ID Token -> Đồng bộ với Backend API
+     */
+    public void loginWithGoogle(String googleIdToken) {
+        loadingLiveData.setValue(true);
+
+        firebaseAuthHelper.loginWithGoogle(googleIdToken, new FirebaseAuthCallback() {
+            @Override
+            public void onSuccess(String firebaseIdToken) {
+                String email = firebaseAuthHelper.getCurrentEmail();
+                // Có Firebase ID token -> gọi backend để đồng bộ Google user
+                authRepository.login(firebaseIdToken, email, new AuthRepository.AuthCallback() {
+                    @Override
+                    public void onSuccess(User user) {
+                        // Lưu thông tin vào SharedPreferences
+                        prefManager.saveToken(firebaseIdToken);
+                        prefManager.saveUserId(user.getUserId());
+                        prefManager.saveUserEmail(user.getEmail());
+                        prefManager.saveUserName(user.getFullName() != null ? user.getFullName() : "");
+                        prefManager.setLoggedIn(true);
+
+                        loadingLiveData.postValue(false);
+                        userLiveData.postValue(user);
+                    }
+
+                    @Override
+                    public void onFailure(String errorMessage) {
+                        loadingLiveData.postValue(false);
+                        errorLiveData.postValue(errorMessage);
+                    }
+                });
+            }
+
+            @Override
+            public void onFailure(String errorMessage) {
+                loadingLiveData.postValue(false);
+                errorLiveData.postValue(errorMessage);
+            }
+        });
+    }
+
+    /**
      * Đăng ký: Firebase Auth → lấy token → gọi backend API
      */
     public void register(String email, String password, String fullName) {

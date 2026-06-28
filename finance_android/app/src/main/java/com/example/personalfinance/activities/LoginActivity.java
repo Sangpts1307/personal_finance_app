@@ -9,12 +9,20 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.personalfinance.MainActivity;
 import com.example.personalfinance.R;
 import com.example.personalfinance.viewmodels.AuthViewModel;
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.tasks.Task;
 
 /**
  * Màn hình đăng nhập.
@@ -27,6 +35,9 @@ public class LoginActivity extends AppCompatActivity {
     private TextView tvError, tvGoToRegister;
     private ProgressBar progressBar;
     private AuthViewModel authViewModel;
+
+    private GoogleSignInClient mGoogleSignInClient;
+    private ActivityResultLauncher<Intent> googleSignInLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +62,27 @@ public class LoginActivity extends AppCompatActivity {
         // ViewModel
         authViewModel = new ViewModelProvider(this).get(AuthViewModel.class);
 
+        // Cấu hình Google Sign-In
+        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(getString(R.string.default_web_client_id)) // Sinh tự động bởi google-services plugin
+                .requestEmail()
+                .build();
+        mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
+
+        // Đăng ký Activity Result Launcher cho Google Sign-In
+        googleSignInLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                        Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(result.getData());
+                        handleGoogleSignInResult(task);
+                    } else {
+                        progressBar.setVisibility(View.GONE);
+                        Toast.makeText(this, "Hủy đăng nhập Google", Toast.LENGTH_SHORT).show();
+                    }
+                }
+        );
+
         // Observe kết quả
         authViewModel.getUserLiveData().observe(this, user -> {
             // Đăng nhập thành công → chuyển sang MainActivity
@@ -69,9 +101,11 @@ public class LoginActivity extends AppCompatActivity {
         authViewModel.getLoadingLiveData().observe(this, isLoading -> {
             progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
             btnLogin.setEnabled(!isLoading);
+            btnLoginGoogle.setEnabled(!isLoading);
+            btnLoginFacebook.setEnabled(!isLoading);
         });
 
-        // Nút đăng nhập
+        // Nút đăng nhập email/password
         btnLogin.setOnClickListener(v -> {
             String email = edtEmail.getText().toString().trim();
             String password = edtPassword.getText().toString().trim();
@@ -92,9 +126,12 @@ public class LoginActivity extends AppCompatActivity {
             authViewModel.login(email, password);
         });
 
-        // Nút Google (placeholder — sẽ tích hợp sau)
+        // Nút Google
         btnLoginGoogle.setOnClickListener(v -> {
-            Toast.makeText(this, "Google Sign-In coming soon!", Toast.LENGTH_SHORT).show();
+            progressBar.setVisibility(View.VISIBLE);
+            tvError.setVisibility(View.GONE);
+            Intent signInIntent = mGoogleSignInClient.getSignInIntent();
+            googleSignInLauncher.launch(signInIntent);
         });
 
         // Nút Facebook (placeholder — sẽ tích hợp sau)
@@ -106,5 +143,20 @@ public class LoginActivity extends AppCompatActivity {
         tvGoToRegister.setOnClickListener(v -> {
             startActivity(new Intent(LoginActivity.this, RegisterActivity.class));
         });
+    }
+
+    private void handleGoogleSignInResult(Task<GoogleSignInAccount> completedTask) {
+        try {
+            GoogleSignInAccount account = completedTask.getResult(ApiException.class);
+            if (account != null) {
+                String idToken = account.getIdToken();
+                // Gửi Google ID Token sang AuthViewModel để đăng nhập Firebase
+                authViewModel.loginWithGoogle(idToken);
+            }
+        } catch (ApiException e) {
+            progressBar.setVisibility(View.GONE);
+            tvError.setText("Google sign in failed: " + e.getStatusCode());
+            tvError.setVisibility(View.VISIBLE);
+        }
     }
 }
